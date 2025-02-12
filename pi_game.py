@@ -1,6 +1,7 @@
+import sqlite3
 
 def main():
-    
+
     def gibbons_lamberts_pi():
         """
         Este é um gerador de dígitos de pi usando um algoritmo spigot.
@@ -42,11 +43,22 @@ def main():
                                     (5 * i * i - 1) * s + (2 * i + 1) * t), i + 1)
 
     print("Bem-vindo ao jogo! Digite os dígitos de π. O jogo para quando você errar.")
-    nome = input("Digite seu nome: ")
+
+    conn = sqlite3.connect('placar.db')
+    cursor = conn.cursor()
+
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS usuarios (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT UNIQUE,
+        pontuacao INTEGER)''')
+    conn.commit()
+    
+    nome = input("Digite seu nome: ").strip().lower()
     pi = gibbons_lamberts_pi()
     count = 0
-    digit = next(pi) # inicializa o gerador com o primeiro número de pi
-
+    digit = next(pi)  # Inicializa o gerador com o primeiro número de pi
+    
     while True:
         try:
             guess = input(f"Digite o próximo dígito de π: ")
@@ -70,6 +82,18 @@ def main():
         else:
             print(f"Errado! O próximo dígito de π é {digit}.")
             print(f"Você digitou {count} dígitos de π.")
+            
+            cursor.execute("SELECT pontuacao FROM usuarios WHERE nome = ?", (nome,))
+            resultado = cursor.fetchone()
+            if resultado:  # Se o usuário já existe
+                pontuacao_atual = resultado[0]
+                if count > pontuacao_atual:
+                    cursor.execute("UPDATE usuarios SET pontuacao = ? WHERE nome = ?", (count, nome))
+            else:  # Se o usuário não existe, insere um novo
+                cursor.execute("INSERT INTO usuarios (nome, pontuacao) VALUES (?, ?)", (nome, count))
+
+            conn.commit()
+            conn.close()
             break
 
 if __name__ == "__main__":
